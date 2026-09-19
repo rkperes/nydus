@@ -61,13 +61,17 @@ Read in this order. The first two are short and determine whether the rest makes
 | [`doc/design/charter.md`](doc/design/charter.md) | Purpose, success criteria, **non-goals** | Before proposing any work |
 | [`doc/design/roadmap.md`](doc/design/roadmap.md) | Six phases, and which ones may never be cut | Before planning |
 | [`doc/design/measurement.md`](doc/design/measurement.md) | Scale emulation, failure catalogue, validity rules | Before producing any number |
-| [`doc/decisions/`](doc/decisions/) | Settled trade-offs, and the two open decisions | Before contradicting an existing choice |
+| [`doc/decisions/`](doc/decisions/) | Settled trade-offs and their consequences | Before contradicting an existing choice |
 | [`doc/local/`](doc/local/) | How the machines were built | Before changing anything about them |
 
-**Two decisions are open and block phase 1** —
-[scope](doc/decisions/0007-application-scope.md) and
-[language](doc/decisions/0008-implementation-language.md). Do not start phase 1 work
-until they are closed; do not close them unilaterally.
+**Scope and language are settled.** A personal data hub
+([ADR 0007](doc/decisions/0007-application-scope.md)) written in Go
+([ADR 0008](doc/decisions/0008-implementation-language.md)). No open decisions; phase 1
+is unblocked.
+
+Two things are deferred, not open: **provider selection** is a phase-1 design task, and
+**whether a TypeScript worker joins later** is revisited after phase 3. Neither may be
+settled unilaterally — see the ADRs for the bar each has to clear.
 
 If a choice here conflicts with an accepted ADR, the ADR wins until a successor
 supersedes it. Write the successor; do not edit the original.

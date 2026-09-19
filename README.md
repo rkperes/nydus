@@ -84,8 +84,10 @@ rather than by guessing.
                                     └───────────────────────────────┘
 ```
 
-Durable execution is provided by [Temporal](https://temporal.io). Implementation
-language is an [open decision](doc/decisions/0008-implementation-language.md).
+Durable execution is provided by [Temporal](https://temporal.io). Written in
+[Go](doc/decisions/0008-implementation-language.md) — chosen so that memory and CPU
+boundaries land where they are configured, which is a precondition for measuring
+behaviour at those boundaries.
 
 ## Deployment model
 

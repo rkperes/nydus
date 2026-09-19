@@ -33,8 +33,8 @@ up to that point.
 
 ## Phase 1 — `fakeapi`, one provider, durable worker · ~8h
 
-**Blocked on [ADR 0007](../decisions/0007-application-scope.md) and
-[ADR 0008](../decisions/0008-implementation-language.md).**
+A **personal data hub** ([ADR 0007](../decisions/0007-application-scope.md)) written in
+**Go** ([ADR 0008](../decisions/0008-implementation-language.md)).
 
 `fakeapi` comes first, before any real provider. It is the instrument the rest of the
 project measures with, and it needs to exist before there is anything to measure.
@@ -124,9 +124,8 @@ legible in one pass, and every number links to how it was produced.
 
 ```
 0 ──▶ 1 ──▶ 2 ──▶ 3 ──▶ 4 ──▶ 5
-      ▲                  │
-      └── ADR 0007, 0008 │
-                         └── needs phase 3's metrics to mean anything
+                       │
+                       └── needs phase 3's metrics to mean anything
 ```
 
 Phase 4 without phase 3 produces numbers nobody can interpret. Phase 3 before phase 2

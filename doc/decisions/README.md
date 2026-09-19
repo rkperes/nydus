@@ -11,10 +11,15 @@ successor that supersedes it — the original stays, because the reasoning is th
 | [0004](0004-registry-loopback-tunnel.md) | Registry on loopback, reached by SSH tunnel | Accepted |
 | [0005](0005-apiserver-on-tailnet.md) | API server bound to the tailnet address | Accepted |
 | [0006](0006-cross-compile-by-copy.md) | Cross-compile and `COPY`, never `RUN` under emulation | Accepted |
-| [0007](0007-application-scope.md) | Application scope | **Open** |
-| [0008](0008-implementation-language.md) | Implementation language | **Open** |
+| [0007](0007-application-scope.md) | Application scope — personal data hub | Accepted |
+| [0008](0008-implementation-language.md) | Implementation language — Go | Accepted |
 
-Both open decisions block phase 1 of the [roadmap](../design/roadmap.md).
+No open decisions. Phase 1 of the [roadmap](../design/roadmap.md) is unblocked.
+
+Two things are deferred rather than decided, each recorded in its ADR: **provider
+selection** (a phase-1 design task, [0007](0007-application-scope.md)) and **whether a
+TypeScript worker joins later** (revisit after phase 3,
+[0008](0008-implementation-language.md)).
 
 ## Format
 

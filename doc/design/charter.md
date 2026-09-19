@@ -90,8 +90,8 @@ reviewable. The same choice undocumented is indistinguishable from an accident. 
 
 ## Scale of the effort
 
-Roughly 38 hours across six phases. See [the roadmap](roadmap.md). Two decisions block
-phase 1 and are still open:
+Roughly 38 hours across six phases. See [the roadmap](roadmap.md).
 
-- [ADR 0007 — application scope](../decisions/0007-application-scope.md)
-- [ADR 0008 — implementation language](../decisions/0008-implementation-language.md)
+Scope and language are settled: a **personal data hub**
+([ADR 0007](../decisions/0007-application-scope.md)), written in **Go**
+([ADR 0008](../decisions/0008-implementation-language.md)). Nothing blocks phase 1.
