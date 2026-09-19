@@ -63,6 +63,7 @@ Read in this order. The first two are short and determine whether the rest makes
 | [`doc/design/measurement.md`](doc/design/measurement.md) | Scale emulation, failure catalogue, validity rules | Before producing any number |
 | [`doc/decisions/`](doc/decisions/) | Settled trade-offs and their consequences | Before contradicting an existing choice |
 | [`doc/local/`](doc/local/) | How the machines were built | Before changing anything about them |
+| [`doc/status.md`](doc/status.md) | Where the last session stopped, and what is unverified | **First, at the start of a session** |
 
 **Scope and language are settled.** A personal data hub
 ([ADR 0007](doc/decisions/0007-application-scope.md)) written in Go

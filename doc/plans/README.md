@@ -19,3 +19,5 @@ Status values: `Not started` · `In progress` · `Done` · `Abandoned`
   test cycle to hang a TDD plan off.
 - Application plans (phase 1 onward) are produced by the `writing-plans` skill
   and land in this same directory. See `AGENTS.md`.
+
+Current execution state and session handoff notes: [`doc/status.md`](../status.md).
