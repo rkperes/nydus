@@ -1,0 +1,22 @@
+# secrets and local state
+.env
+.env.*
+*.kubeconfig
+kubeconfig
+secrets/
+
+# build output
+/bin/
+/out/
+/dist/
+/tmp/
+
+# dependencies
+node_modules/
+vendor/
+
+# editors and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
