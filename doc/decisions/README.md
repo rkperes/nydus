@@ -13,6 +13,7 @@ successor that supersedes it — the original stays, because the reasoning is th
 | [0006](0006-cross-compile-by-copy.md) | Cross-compile and `COPY`, never `RUN` under emulation | Accepted |
 | [0007](0007-application-scope.md) | Application scope — personal data hub | Accepted |
 | [0008](0008-implementation-language.md) | Implementation language — Go | Accepted |
+| [0009](0009-durable-execution.md) | Durable execution — Temporal | Accepted |
 
 No open decisions. Phase 1 of the [roadmap](../design/roadmap.md) is unblocked.
 
