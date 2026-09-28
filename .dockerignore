@@ -1,0 +1,7 @@
+.git
+doc
+.env
+.env.*
+*.kubeconfig
+secrets
+.DS_Store
