@@ -21,15 +21,16 @@ executed end to end.
 | Charter, roadmap, measurement method | Done |
 | ADRs 0001–0008 | All accepted; none open |
 | **Phase 0 executed** | **Done** |
-| Phase 1 planned | Not started |
+| Phase 1 planned | **Done** — [`2026-09-28-fakeapi-provider-durable-worker.md`](plans/2026-09-28-fakeapi-provider-durable-worker.md) |
 
 ## Next session starts here
 
-1. **Write the phase-1 plan.** Use the `writing-plans` skill; it writes into
-   [`plans/`](plans/) per `AGENTS.md`. Phase 1 is `fakeapi` first, then one real
-   provider, then a durable worker — see [`roadmap.md`](design/roadmap.md).
-2. Execute it the same way: every step states command, expected output, and stop
-   condition.
+1. **Execute the phase-1 plan** top to bottom. It settles two decisions up front —
+   durable execution is **Temporal** (ADR 0009, self-hosted on kind with its own
+   Postgres) and the first provider is **GitHub** (ADR 0010, overridable) — then builds
+   `fakeapi`, the worker, and proves resumability by killing the worker mid-sync.
+2. Same rule as phase 0: every step states command, expected output, and stop condition.
+   The resumability task (Task 9) is the phase's "done when".
 
 ## Known-unverified, likely to bite
 
