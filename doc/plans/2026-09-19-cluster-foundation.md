@@ -103,6 +103,7 @@ Expected: the personal address. If it shows `@ext.uber.com`, stop.
 
 ```bash
 docker version --format '{{.Server.Version}}'
+docker buildx version
 kubectl version --client -o yaml | grep gitVersion
 make --version | head -1
 crane version
@@ -111,16 +112,14 @@ ssh -o BatchMode=yes pc 'echo ssh ok'
 Expected: a version from each, and `ssh ok`.
 Any `command not found` → install it before continuing. Any SSH failure → stop.
 
-- [ ] **Step 2 (workstation): create a buildx builder that can push**
-
-The default `docker` driver cannot push build output to a registry. A
-`docker-container` builder can.
+- [ ] **Step 2 (workstation): set up `.env`**
 
 ```bash
-docker buildx create --name nydus --driver docker-container --use 2>/dev/null || docker buildx use nydus
-docker buildx inspect --bootstrap | head -5
+cd ~/src/nydus && cp .env.example .env
 ```
-Expected: `Name: nydus`, `Status: running`.
+Then edit `.env`: set `SERVER` to the SSH alias the workstation uses to reach the
+server. Leave the other knobs commented out unless you need them. `.env` is gitignored,
+so local values never leak into the repository.
 
 ---
 
@@ -183,15 +182,20 @@ If it shows `0.0.0.0:5000`, the port publish is wrong. Fix the script and re-run
 
 - [ ] **Step 1 (workstation): create `kind.yaml` at the repo root**
 
+The `apiServerAddress` is a placeholder. `make cluster-up` substitutes the server's live
+tailnet IP into it before the config reaches the server, so this file carries no
+machine-specific address.
+
 ```yaml
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: lab
 
 networking:
-  # Tailnet address of the server. Placed in the API server cert SANs by kind,
-  # so kubectl from any tailnet device validates cleanly.
-  apiServerAddress: "100.120.164.25"
+  # Tailnet address of the server. `make cluster-up` replaces the placeholder below
+  # with the server's live tailnet IP (or API_SERVER_ADDRESS from .env), so kubectl
+  # from any tailnet device validates cleanly.
+  apiServerAddress: "__API_SERVER_ADDRESS__"
   apiServerPort: 6443
 
 # Point containerd at a per-registry config directory. The hosts.toml that makes
@@ -208,13 +212,14 @@ nodes:
   - role: worker
 ```
 
-- [ ] **Step 2 (workstation): confirm the tailnet address is still correct**
+- [ ] **Step 2 (workstation): confirm the inference target answers**
 
 ```bash
 ssh pc 'tailscale ip -4'
 ```
-Expected: `100.120.164.25`. If it differs, update `kind.yaml` before continuing —
-a mismatch produces a TLS error in Task 6 that looks unrelated.
+Expected: an IPv4 address. The Makefile fetches this same value at `cluster-up` time, so
+no manual edit is needed. If you want a fixed address instead, set `API_SERVER_ADDRESS`
+in `.env`.
 
 ---
 
@@ -269,10 +274,13 @@ chmod +x deploy/cluster-up.sh
 Recipe lines must begin with a **tab**.
 
 ```make
-SERVER          ?= pc
-CLUSTER         := lab
-REG_PORT        := 5000
-KUBECONFIG_FILE := $(HOME)/.kube/nydus-$(CLUSTER).yaml
+-include .env
+
+SERVER            ?= pc
+CLUSTER           := lab
+REG_PORT          := 5000
+API_SERVER_ADDRESS ?=
+KUBECONFIG_FILE   ?= $(HOME)/.kube/nydus-$(CLUSTER).yaml
 
 .PHONY: bootstrap cluster-up cluster-down kubeconfig tunnel tunnel-stop status nuke
 
@@ -280,7 +288,13 @@ bootstrap:
 	ssh $(SERVER) 'bash -s' < deploy/bootstrap-server.sh
 
 cluster-up:
-	cat kind.yaml | ssh $(SERVER) 'cat > /tmp/nydus-kind.yaml'
+	@if [ -n "$(API_SERVER_ADDRESS)" ]; then \
+	  ip="$(API_SERVER_ADDRESS)"; \
+	else \
+	  ip=$$(ssh $(SERVER) 'tailscale ip -4' | head -1); \
+	fi; \
+	[ -n "$$ip" ] || { echo "could not infer tailscale IP from $(SERVER)" >&2; exit 1; }; \
+	sed "s/__API_SERVER_ADDRESS__/$$ip/" kind.yaml | ssh $(SERVER) 'cat > /tmp/nydus-kind.yaml'
 	ssh $(SERVER) 'bash -s' < deploy/cluster-up.sh
 	$(MAKE) kubeconfig
 
@@ -312,10 +326,9 @@ nuke: cluster-down tunnel-stop
 - [ ] **Step 2 (workstation): verify the tabs survived**
 
 ```bash
-cd ~/src/nydus && grep -cP '^\t' Makefile
+cd ~/src/nydus && grep -c $'^\t' Makefile
 ```
-Expected: `18`.
-If `0`, the recipe lines are space-indented:
+Expected: `> 0`. If `0`, the recipe lines are space-indented:
 ```bash
 sed -i '' 's/^    /\t/' Makefile
 ```
@@ -338,8 +351,9 @@ Expected: three node names, then the `export KUBECONFIG=...` hint.
 export KUBECONFIG=$HOME/.kube/nydus-lab.yaml
 kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}{"\n"}'
 ```
-Expected: `https://100.120.164.25:6443` — **not** `https://127.0.0.1:...`.
-If it shows loopback, `apiServerAddress` did not take. Re-check Task 3.
+Expected: `https://<server-tailnet-ip>:6443` — the server's tailnet address, **not**
+`https://127.0.0.1:...`. If it shows loopback, the placeholder was not substituted.
+Re-check Task 3.
 
 - [ ] **Step 3 (workstation): reach the cluster over the tailnet**
 
@@ -644,8 +658,10 @@ Then `make cluster-down && make cluster-up`.
 
 ### TLS error mentioning certificate SANs
 
-The tailnet address in `kind.yaml` no longer matches the server. Re-read it with
-`ssh pc 'tailscale ip -4'`, update `kind.yaml`, and recreate the cluster.
+The API server address baked into the cluster no longer matches the server. The
+Makefile infers it at `cluster-up` time, so re-check with `ssh pc 'tailscale ip -4'`
+and recreate the cluster. If the inference is wrong for your setup, pin it in `.env`
+(`API_SERVER_ADDRESS=...`) and recreate.
 
 ### buildx is slow
 

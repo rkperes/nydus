@@ -97,7 +97,7 @@ Development treats the cluster as a **remote server**, not a local sandbox:
   workstation (arm64)                    server (x86_64)
   ┌─────────────────────┐                ┌──────────────────────────┐
   │ source, editor      │                │ registry  127.0.0.1:5000 │
-  │ docker buildx ──────┼── ssh tunnel ──┼─→                        │
+  │ docker buildx+crane ─┼── ssh tunnel ──┼─→                        │
   │ kubectl      ───────┼── tailnet ─────┼─→ kind cluster           │
   └─────────────────────┘                └──────────────────────────┘
 ```
@@ -115,11 +115,11 @@ number. See [ADR 0001](doc/decisions/0001-bare-metal.md).
 
 ## Status
 
-Early. Phase 0 of six.
+Phase 0 of six is done.
 
 | Phase | Delivers | State |
 |---|---|---|
-| 0 | Remote cluster, registry round-trip, fidelity proven | In progress |
+| 0 | Remote cluster, registry round-trip, fidelity proven | Done |
 | 1 | `fakeapi`, one provider, durable worker | Not started |
 | 2 | Limits, probes, autoscaling, disruption budgets | Not started |
 | 3 | Prometheus, Grafana, RED metrics, queue depth | Not started |
@@ -131,15 +131,21 @@ Phases 3 and 4 are the point. See [the roadmap](doc/design/roadmap.md).
 ## Quick start
 
 ```bash
+cp .env.example .env   # then edit: SERVER (SSH alias), optional overrides
 make bootstrap     # provision the server: registry
-make cluster-up    # create the cluster
+make cluster-up    # create the cluster (infers the API server's tailnet IP)
 make kubeconfig    # fetch credentials to the workstation
 make tunnel        # open the registry tunnel
 make status
 ```
 
-Workstation needs Docker with buildx, kubectl, make, and SSH to the server. Server needs
-Docker with **cgroups v2**, and kind.
+`make cluster-up` bakes the server's live tailnet IP into the API server TLS SANs, so
+`kubectl` validates cleanly. Set `API_SERVER_ADDRESS` in `.env` to override that
+inference. The kubeconfig lands at `~/.kube/nydus-lab.yaml`; point `kubectl` at it with
+`export KUBECONFIG=...` (or set `KUBECONFIG_FILE` in `.env`).
+
+Workstation needs Docker with buildx, `crane`, kubectl, make, and SSH to the server.
+Server needs Docker with **cgroups v2**, and kind.
 
 ## Documentation
 

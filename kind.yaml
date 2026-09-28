@@ -3,9 +3,10 @@ apiVersion: kind.x-k8s.io/v1alpha4
 name: lab
 
 networking:
-  # Tailnet address of the server. Placed in the API server cert SANs by kind,
+  # Tailnet address of the server. `make cluster-up` replaces the placeholder
+  # below with the server's live tailnet IP (or API_SERVER_ADDRESS from .env),
   # so kubectl from any tailnet device validates cleanly.
-  apiServerAddress: "100.120.164.25"
+  apiServerAddress: "__API_SERVER_ADDRESS__"
   apiServerPort: 6443
 
 # Point containerd at a per-registry config directory. The hosts.toml that makes

@@ -47,8 +47,8 @@ executed end to end.
 - **inotify sysctls.** The three kubelets came up `Ready` without
   `/etc/sysctl.d/99-kind.conf` — the Ubuntu 26.04 default is sufficient. No longer a
   suspect.
-- **Tailnet IP `100.120.164.25`** confirmed current and baked into `kind.yaml`; API
-  server cert SANs validate from the workstation.
+- **Tailnet IP `100.120.164.25`** confirmed current. It is no longer hardcoded:
+  `make cluster-up` infers it from the server at build time.
 
 ## Open threads, none blocking
 
@@ -74,5 +74,8 @@ executed end to end.
 - Docker Desktop's daemon lives in a Linux VM; its `127.0.0.1` is not the Mac's. `docker
   push localhost:5000` never reaches the registry tunnel. Push with `crane`, a host
   binary pointed at `127.0.0.1:5000`. See the topology note in `AGENTS.md`.
+- Machine-specific values (SSH alias, API server address, kubeconfig path) live in a
+  gitignored `.env`, copied from `.env.example`. Nothing machine-specific is hardcoded
+  in `kind.yaml` or the `Makefile`.
 - `git push` goes to GitLab only. A server-side mirror copies to GitHub. Never commit on
   GitHub — the mirror force-pushes over it.
