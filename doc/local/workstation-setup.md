@@ -22,7 +22,7 @@ never copied. That is the local stand-in for Terraform.
 
 ```
 Host pc
-    HostName 192.168.0.5
+    HostName <server-lan-ip>
     User rkperes
     ServerAliveInterval 30
     ServerAliveCountMax 6
@@ -49,7 +49,7 @@ API server binds (inferred by `make cluster-up`); it is stable per node.
 
 ```bash
 ssh-keygen -t ed25519 -C "mac"
-ssh-copy-id -i ~/.ssh/id_ed25519.pub rkperes@192.168.0.5
+ssh-copy-id -i ~/.ssh/id_ed25519.pub rkperes@<server-lan-ip>
 ```
 
 Then keep the passphrase in the keychain:
@@ -63,7 +63,7 @@ Host *
 
 > If Tailscale SSH is enabled on the server it bypasses `authorized_keys`, so testing
 > through the tailnet proves nothing about your key. Test the real `sshd` explicitly:
-> `ssh -o PasswordAuthentication=no rkperes@192.168.0.5`
+> `ssh -o PasswordAuthentication=no rkperes@<server-lan-ip>`
 
 ### Host keys
 
@@ -74,20 +74,17 @@ already trust:
 ```bash
 ssh-keygen -F rkperes-linux0.local | grep -v '^#' | awk '{print $2, $3}' \
   | while read t k; do echo "$t $k" | ssh-keygen -lf -; done
-ssh-keyscan -T 5 192.168.0.5 | ssh-keygen -lf -
+ssh-keyscan -T 5 <server-lan-ip> | ssh-keygen -lf -
 ```
-Fingerprints match → `ssh-keyscan -T 5 192.168.0.5 >> ~/.ssh/known_hosts`.
+Fingerprints match → `ssh-keyscan -T 5 <server-lan-ip> >> ~/.ssh/known_hosts`.
 
 ## Cross-compilation
 
 `arm64` workstation, `amd64` server. Every image must be `linux/amd64`.
 
-A builder that can push to a registry — the default `docker` driver cannot:
-
-```bash
-docker buildx create --name nydus --driver docker-container --use
-docker buildx inspect --bootstrap
-```
+Cross-built images are exported as a tarball and pushed with `crane` — see
+[Registry access](#registry-access). No special buildx builder is needed; the `buildx`
+bundled with Docker Desktop exports a platform-pinned tarball out of the box.
 
 **The cost is entirely in `RUN`.** Each `RUN` in a cross-built image executes under QEMU
 at roughly 3–10× the native cost, and breaks outright on some native toolchains
@@ -138,15 +135,23 @@ tailnet. Images reach it through an SSH tunnel:
 make tunnel      # ssh -fN -L 5000:127.0.0.1:5000 pc
 ```
 
-The reason for this shape: Docker treats `localhost` as an insecure registry by
-default. Pushing to `localhost:5000` therefore needs no TLS certificate, no
-`insecure-registries` daemon edit, and leaves nothing listening on a routable address.
-
-Inside the cluster, containerd rewrites `localhost:5000` to the registry container on
-the kind network, so the same image reference works in a manifest.
+The tunnel terminates on the Mac's loopback. Docker Desktop runs its daemon inside a
+Linux VM whose `127.0.0.1` is not the Mac's, so `docker push localhost:5000` never
+reaches the tunnel. Push with `crane`, a host binary that speaks the registry HTTP API
+directly (like `curl`) and can see the tunnel:
 
 ```bash
-curl -fsS http://localhost:5000/v2/_catalog     # is the tunnel up?
+docker buildx build --platform linux/amd64 -o type=docker,dest=img.tar .
+crane push img.tar 127.0.0.1:5000/app:<tag>
+```
+
+`127.0.0.1:5000` is plain HTTP, so there is no TLS to manage and nothing listens on a
+routable address. Inside the cluster, containerd rewrites `localhost:5000` to the
+registry container on the kind network, so the same image reference works in a manifest
+(the pod still names `localhost:5000/...`).
+
+```bash
+curl -fsS http://127.0.0.1:5000/v2/_catalog   # is the tunnel up?
 make tunnel-stop
 ```
 
@@ -159,7 +164,8 @@ export KUBECONFIG=$HOME/.kube/nydus-lab.yaml
 
 # per change
 GOOS=linux GOARCH=amd64 go build -o bin/app-linux-amd64 ./cmd/app
-docker buildx build --platform linux/amd64 -t localhost:5000/app:$(git rev-parse --short HEAD) --push .
+docker buildx build --platform linux/amd64 -o type=docker,dest=/tmp/app.tar .
+crane push /tmp/app.tar 127.0.0.1:5000/app:$(git rev-parse --short HEAD)
 kubectl set image deployment/app app=localhost:5000/app:$(git rev-parse --short HEAD)
 kubectl rollout status deployment/app
 ```
@@ -196,8 +202,8 @@ diagnosing an infrastructure problem. Reading, not writing.
 |---|---|
 | `ssh: No route to host` on a `.local` name | mDNS not crossing the wireless/wired boundary. Use the IP. |
 | `kex_exchange_identification: Connection reset` on the tailnet | Tailscale SSH enabled without an `ssh:` ACL rule. |
-| `failed to do request` from `buildx --push` | Registry tunnel down. `make tunnel`. |
-| `unknown driver` / `--push` unsupported | The `docker` driver cannot push. Create the `docker-container` builder. |
+| `crane push` fails with `connection refused` | Registry tunnel down. `make tunnel`. |
+| `docker push` never reaches the registry | Docker Desktop's VM loopback ≠ the Mac's. Push with `crane` to `127.0.0.1:5000`. |
 | TLS error naming a certificate SAN | The server's address changed. Recreate the cluster, or pin `API_SERVER_ADDRESS` in `.env`. |
 | `ErrImagePull` on `localhost:5000/...` | See Troubleshooting in the cluster-foundation plan. |
 | Build inexplicably slow | A `RUN` instruction is executing under QEMU. |

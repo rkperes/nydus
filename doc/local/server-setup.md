@@ -225,7 +225,7 @@ sudo systemctl restart ssh
 
 > When Tailscale SSH is enabled it bypasses `authorized_keys` entirely, so testing key
 > auth through the tailnet name proves nothing. Test against the LAN address:
-> `ssh -o PasswordAuthentication=no user@192.168.0.5`
+> `ssh -o PasswordAuthentication=no user@<server-lan-ip>`
 
 ## Container tooling
 
