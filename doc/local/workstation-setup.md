@@ -33,7 +33,7 @@ Host pc
 # Tailnet path — works away from the LAN. Requires either an ssh: rule in the
 # tailnet ACL policy, or `sudo tailscale set --ssh=false` on the server.
 Host pc-ts
-    HostName 100.120.164.25
+    HostName <server-tailnet-ip>
     User rkperes
     ServerAliveInterval 30
     ServerAliveCountMax 6
@@ -42,8 +42,8 @@ Host pc-ts
 The forwards cover a future app, Prometheus, and Temporal's UI.
 
 `HostName` is the LAN address because neither mDNS nor MagicDNS resolved reliably from
-this laptop. The Tailscale **IP** is the address that works from anywhere and is what
-`kind.yaml` uses for the API server; it is stable per node.
+this laptop. The Tailscale IP is the address that works from anywhere and is what the
+API server binds (inferred by `make cluster-up`); it is stable per node.
 
 ### Key auth
 
@@ -112,9 +112,9 @@ any language decision this project makes later.
 
 ## Cluster access
 
-`kubectl` talks to the API server over the tailnet — no tunnel, because `kind.yaml` binds
-`apiServerAddress` to the server's Tailscale IP and kind places that address in the
-serving certificate's SANs.
+`kubectl` talks to the API server over the tailnet — no tunnel, because `make cluster-up`
+bakes the server's tailnet IP into `kind.yaml`'s `apiServerAddress`, and kind places that
+address in the serving certificate's SANs.
 
 ```bash
 make kubeconfig
@@ -198,6 +198,6 @@ diagnosing an infrastructure problem. Reading, not writing.
 | `kex_exchange_identification: Connection reset` on the tailnet | Tailscale SSH enabled without an `ssh:` ACL rule. |
 | `failed to do request` from `buildx --push` | Registry tunnel down. `make tunnel`. |
 | `unknown driver` / `--push` unsupported | The `docker` driver cannot push. Create the `docker-container` builder. |
-| TLS error naming a certificate SAN | The server's tailnet IP changed. Update `kind.yaml`, recreate the cluster. |
+| TLS error naming a certificate SAN | The server's address changed. Recreate the cluster, or pin `API_SERVER_ADDRESS` in `.env`. |
 | `ErrImagePull` on `localhost:5000/...` | See Troubleshooting in the cluster-foundation plan. |
 | Build inexplicably slow | A `RUN` instruction is executing under QEMU. |

@@ -133,16 +133,17 @@ Phases 3 and 4 are the point. See [the roadmap](doc/design/roadmap.md).
 ```bash
 cp .env.example .env   # then edit: SERVER (SSH alias), optional overrides
 make bootstrap     # provision the server: registry
-make cluster-up    # create the cluster (infers the API server's tailnet IP)
+make cluster-up    # create the cluster (infers the server's address)
 make kubeconfig    # fetch credentials to the workstation
 make tunnel        # open the registry tunnel
 make status
 ```
 
-`make cluster-up` bakes the server's live tailnet IP into the API server TLS SANs, so
-`kubectl` validates cleanly. Set `API_SERVER_ADDRESS` in `.env` to override that
-inference. The kubeconfig lands at `~/.kube/nydus-lab.yaml`; point `kubectl` at it with
-`export KUBECONFIG=...` (or set `KUBECONFIG_FILE` in `.env`).
+`make cluster-up` bakes the server's address (its tailnet IP, or its primary IP on a
+plain LAN) into the API server TLS SANs, so `kubectl` validates cleanly. Set
+`API_SERVER_ADDRESS` in `.env` to override that inference. The kubeconfig lands at
+`~/.kube/nydus-lab.yaml`; point `kubectl` at it with `export KUBECONFIG=...` (or set
+`KUBECONFIG_FILE` in `.env`).
 
 Workstation needs Docker with buildx, `crane`, kubectl, make, and SSH to the server.
 Server needs Docker with **cgroups v2**, and kind.

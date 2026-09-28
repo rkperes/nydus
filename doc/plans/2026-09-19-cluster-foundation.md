@@ -22,8 +22,8 @@ would teach nothing.
 | | Workstation | Server |
 |---|---|---|
 | host | macOS, `arm64` | `rkperes-linux0`, Ubuntu 26.04.1 (`resolute`), `x86_64` |
-| reached as | — | `ssh pc` → `192.168.0.5` |
-| tailnet | `100.74.44.90` | `100.120.164.25` |
+| reached as | — | `ssh pc` (LAN address from `~/.ssh/config`) |
+| tailnet | workstation and server share a tailnet | API server binds the server's tailnet IP (inferred at cluster-up) |
 | hardware | — | Ryzen 5 7600X (6c/12t), 32 GB RAM, bare metal |
 
 ## Preconditions — verified 2026-09-19
@@ -215,11 +215,11 @@ nodes:
 - [ ] **Step 2 (workstation): confirm the inference target answers**
 
 ```bash
-ssh pc 'tailscale ip -4'
+ssh pc 'tailscale ip -4 2>/dev/null || hostname -I'
 ```
-Expected: an IPv4 address. The Makefile fetches this same value at `cluster-up` time, so
-no manual edit is needed. If you want a fixed address instead, set `API_SERVER_ADDRESS`
-in `.env`.
+Expected: an IPv4 address. The Makefile fetches the same value at `cluster-up` time —
+the tailnet IP if tailscale is present, else the server's primary IP — so no manual edit
+is needed. If you want a fixed address instead, set `API_SERVER_ADDRESS` in `.env`.
 
 ---
 
@@ -291,9 +291,10 @@ cluster-up:
 	@if [ -n "$(API_SERVER_ADDRESS)" ]; then \
 	  ip="$(API_SERVER_ADDRESS)"; \
 	else \
-	  ip=$$(ssh $(SERVER) 'tailscale ip -4' | head -1); \
+	  ip=$$(ssh $(SERVER) 'tailscale ip -4 2>/dev/null | head -1'); \
+	  [ -n "$$ip" ] || ip=$$(ssh $(SERVER) 'hostname -I 2>/dev/null | cut -d" " -f1'); \
 	fi; \
-	[ -n "$$ip" ] || { echo "could not infer tailscale IP from $(SERVER)" >&2; exit 1; }; \
+	[ -n "$$ip" ] || { echo "could not infer the server address from $(SERVER); set API_SERVER_ADDRESS in .env" >&2; exit 1; }; \
 	sed "s/__API_SERVER_ADDRESS__/$$ip/" kind.yaml | ssh $(SERVER) 'cat > /tmp/nydus-kind.yaml'
 	ssh $(SERVER) 'bash -s' < deploy/cluster-up.sh
 	$(MAKE) kubeconfig

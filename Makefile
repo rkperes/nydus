@@ -5,9 +5,9 @@
 SERVER            ?= pc
 CLUSTER           := lab
 REG_PORT          := 5000
-# Tailnet address baked into the API server's TLS SANs. Inferred from the server
-# at cluster-up time (ssh $SERVER 'tailscale ip -4'). Set it explicitly only when
-# the inference is wrong.
+# Address baked into the API server's TLS SANs. Inferred from the server at
+# cluster-up time — its tailnet IP if tailscale is present, else its primary IP.
+# Set it explicitly when the inference is wrong.
 API_SERVER_ADDRESS ?=
 KUBECONFIG_FILE   ?= $(HOME)/.kube/nydus-$(CLUSTER).yaml
 
@@ -20,9 +20,10 @@ cluster-up:
 	@if [ -n "$(API_SERVER_ADDRESS)" ]; then \
 	  ip="$(API_SERVER_ADDRESS)"; \
 	else \
-	  ip=$$(ssh $(SERVER) 'tailscale ip -4' | head -1); \
+	  ip=$$(ssh $(SERVER) 'tailscale ip -4 2>/dev/null | head -1'); \
+	  [ -n "$$ip" ] || ip=$$(ssh $(SERVER) 'hostname -I 2>/dev/null | cut -d" " -f1'); \
 	fi; \
-	[ -n "$$ip" ] || { echo "could not infer tailscale IP from $(SERVER)" >&2; exit 1; }; \
+	[ -n "$$ip" ] || { echo "could not infer the server address from $(SERVER); set API_SERVER_ADDRESS in .env" >&2; exit 1; }; \
 	sed "s/__API_SERVER_ADDRESS__/$$ip/" kind.yaml | ssh $(SERVER) 'cat > /tmp/nydus-kind.yaml'
 	ssh $(SERVER) 'bash -s' < deploy/cluster-up.sh
 	$(MAKE) kubeconfig

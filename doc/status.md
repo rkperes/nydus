@@ -47,8 +47,8 @@ executed end to end.
 - **inotify sysctls.** The three kubelets came up `Ready` without
   `/etc/sysctl.d/99-kind.conf` — the Ubuntu 26.04 default is sufficient. No longer a
   suspect.
-- **Tailnet IP `100.120.164.25`** confirmed current. It is no longer hardcoded:
-  `make cluster-up` infers it from the server at build time.
+- **The server's tailnet IP** was confirmed current, but is no longer hardcoded
+  anywhere: `make cluster-up` infers it from the server at build time.
 
 ## Open threads, none blocking
 
