@@ -142,8 +142,9 @@ make status
 `make cluster-up` bakes the server's address (its tailnet IP, or its primary IP on a
 plain LAN) into the API server TLS SANs, so `kubectl` validates cleanly. Set
 `API_SERVER_ADDRESS` in `.env` to override that inference. The kubeconfig lands at
-`~/.kube/nydus-lab.yaml`; point `kubectl` at it with `export KUBECONFIG=...` (or set
-`KUBECONFIG_FILE` in `.env`).
+`~/.kube/nydus-lab.yaml`; a committed `.envrc` (direnv) points `kubectl` at it
+automatically inside the repo — run `direnv allow` once. Without direnv, set
+`KUBECONFIG` or `KUBECONFIG_FILE` in `.env`.
 
 Workstation needs Docker with buildx, `crane`, kubectl, make, and SSH to the server.
 Server needs Docker with **cgroups v2**, and kind.

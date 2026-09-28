@@ -113,13 +113,16 @@ any language decision this project makes later.
 bakes the server's tailnet IP into `kind.yaml`'s `apiServerAddress`, and kind places that
 address in the serving certificate's SANs.
 
+The repo ships a `.envrc` (direnv) that sets `KUBECONFIG` for this directory, so after a
+one-time `direnv allow`, `kubectl` inside the repo targets the cluster with no export:
+
 ```bash
-make kubeconfig
-export KUBECONFIG=$HOME/.kube/nydus-lab.yaml
-kubectl get nodes
+make kubeconfig     # fetch credentials
+direnv allow        # once, trust .envrc
+kubectl get nodes   # no export needed
 ```
 
-Keep that export in your shell profile, or prefix commands with
+Without direnv, `export KUBECONFIG=$HOME/.kube/nydus-lab.yaml` or prefix commands with
 `--kubeconfig`. Do **not** merge it into `~/.kube/config` alongside work clusters; a
 mis-targeted `kubectl delete` is not worth the convenience.
 
