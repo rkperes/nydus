@@ -1,6 +1,6 @@
 # Status — session handoff
 
-**Last updated: 2026-09-19.** Volatile by design. Update it at the end of a session or
+**Last updated: 2026-09-28.** Volatile by design. Update it at the end of a session or
 delete it; a stale status document is worse than none.
 
 For durable information use [`charter.md`](design/charter.md),
@@ -9,12 +9,9 @@ For durable information use [`charter.md`](design/charter.md),
 
 ## Where things stand
 
-Phase 0 is **planned but not executed**. There is no cluster.
-
-Everything committed so far is documentation and decisions. The repository contains no
-`Makefile`, no `kind.yaml`, and no `deploy/` — those are *created by* the phase-0 plan,
-[`plans/2026-09-19-cluster-foundation.md`](plans/2026-09-19-cluster-foundation.md), which
-has never been run.
+Phase 0 is **done**. The cluster exists and the full build → push → deploy round trip
+was proven from the workstation. `doc/plans/2026-09-19-cluster-foundation.md` was
+executed end to end.
 
 | | State |
 |---|---|
@@ -23,34 +20,35 @@ has never been run.
 | Repository, GitLab remote, GitHub mirror | Done |
 | Charter, roadmap, measurement method | Done |
 | ADRs 0001–0008 | All accepted; none open |
-| **Phase 0 executed** | **Not started** |
+| **Phase 0 executed** | **Done** |
 | Phase 1 planned | Not started |
 
 ## Next session starts here
 
-1. **Run the phase-0 plan.** It is written for an executor with no context. **Skip
-   Task 0** — git identity is already set repo-locally
-   (`Rafael Koch Peres <rafaelkperes@gmail.com>`).
-2. **Task 1 needs a human**: `sudo apt install -y make` on the server. There is no
-   passwordless sudo.
-3. Then phase 1 needs a plan. Use the `writing-plans` skill; it writes into
-   [`plans/`](plans/) per `AGENTS.md`.
+1. **Write the phase-1 plan.** Use the `writing-plans` skill; it writes into
+   [`plans/`](plans/) per `AGENTS.md`. Phase 1 is `fakeapi` first, then one real
+   provider, then a durable worker — see [`roadmap.md`](design/roadmap.md).
+2. Execute it the same way: every step states command, expected output, and stop
+   condition.
 
 ## Known-unverified, likely to bite
 
-These were discussed but never confirmed. Check before blaming something else.
-
-- **inotify sysctls on the server.** `/etc/sysctl.d/99-kind.conf` may not exist. Without
-  it, three kubelets exhaust the default and nodes hang `NotReady`. The plan's
-  troubleshooting section covers it; checking first is cheaper.
-- **kind on the server is an alpha build** (`v0.34.0-alpha`), installed via the
-  `dl/latest` endpoint. Pin to a named release before anything reproducible is measured.
-- **The tailnet IP is hardcoded** in the `kind.yaml` the plan creates
-  (`100.120.164.25`). The plan verifies it, but a mismatch surfaces later as a TLS SAN
-  error that does not point at its cause.
+- **kind on the server is still an alpha build** (`v0.34.0-alpha`), and the node image
+  it pulled is `v1.37.0`. Pin kind to a named release before anything reproducible is
+  measured.
 - **BIOS was never confirmed changed.** Secure Boot off and "Restore on AC Power Loss →
   Power On" both require physical presence and may still be unset. The second one means
   the machine will not return by itself after a power cut.
+- **A kind cluster does not survive a server reboot.** Recovery is manual
+  (`make cluster-up`). Automating it is deferred to a later plan.
+
+## Verified this session (was previously "likely to bite")
+
+- **inotify sysctls.** The three kubelets came up `Ready` without
+  `/etc/sysctl.d/99-kind.conf` — the Ubuntu 26.04 default is sufficient. No longer a
+  suspect.
+- **Tailnet IP `100.120.164.25`** confirmed current and baked into `kind.yaml`; API
+  server cert SANs validate from the workstation.
 
 ## Open threads, none blocking
 
@@ -65,8 +63,6 @@ These were discussed but never confirmed. Check before blaming something else.
   phase-1 design task, deliberately deferred. Criteria are in the ADR.
 - **Verify `rafaelkperes@gmail.com` on GitHub.** Until then mirrored commits are not
   attributed and do not register on the contribution graph.
-- **A kind cluster does not survive a server reboot.** Recovery is manual
-  (`make cluster-up`). Automating it is deferred to a later plan.
 
 ## Conventions a new session should not have to rediscover
 
@@ -75,5 +71,8 @@ These were discussed but never confirmed. Check before blaming something else.
   follows from.
 - Workstation is `arm64`, server is `amd64`. Build natively and `COPY`; never `RUN` under
   emulation. See [ADR 0006](decisions/0006-cross-compile-by-copy.md).
+- Docker Desktop's daemon lives in a Linux VM; its `127.0.0.1` is not the Mac's. `docker
+  push localhost:5000` never reaches the registry tunnel. Push with `crane`, a host
+  binary pointed at `127.0.0.1:5000`. See the topology note in `AGENTS.md`.
 - `git push` goes to GitLab only. A server-side mirror copies to GitHub. Never commit on
   GitHub — the mirror force-pushes over it.

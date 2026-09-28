@@ -40,7 +40,8 @@ would teach nothing.
 | passwordless sudo | **no** — any sudo step needs a human |
 | existing kind clusters | none |
 
-**Workstation:** Docker, `ssh pc` working with key auth, repo at `~/src/nydus`.
+**Workstation:** Docker, `ssh pc` working with key auth, repo at `~/src/nydus`,
+`crane` (`brew install crane`).
 
 **Known risks**
 
@@ -104,6 +105,7 @@ Expected: the personal address. If it shows `@ext.uber.com`, stop.
 docker version --format '{{.Server.Version}}'
 kubectl version --client -o yaml | grep gitVersion
 make --version | head -1
+crane version
 ssh -o BatchMode=yes pc 'echo ssh ok'
 ```
 Expected: a version from each, and `ssh ok`.
@@ -392,17 +394,23 @@ FROM --platform=linux/amd64 alpine:3.20
 CMD ["sh", "-c", "echo nydus round-trip ok && sleep 3600"]
 ```
 
-- [ ] **Step 4 (workstation): build for amd64 and push**
+- [ ] **Step 4 (workstation): build for amd64, export a tarball, push with `crane`**
+
+Docker Desktop runs its daemon in a Linux VM. Neither `docker push` nor buildkit can
+reach the SSH tunnel on the Mac's loopback — both dial the VM's own empty `127.0.0.1`.
+So build with `buildx` and export a tarball, then push with `crane`, a host binary that
+talks the registry API directly (like `curl`) and can see the tunnel.
 
 ```bash
-docker buildx build \
-  --platform linux/amd64 \
-  -t localhost:5000/nydus-roundtrip:0.1.0 \
-  --push \
+docker buildx build --platform linux/amd64 \
+  -o type=docker,dest=/tmp/nydus-roundtrip.tar \
   deploy/roundtrip
+
+crane push /tmp/nydus-roundtrip.tar 127.0.0.1:5000/nydus-roundtrip:0.1.0
 ```
-Expected: ends with `pushing manifest`.
-`failed to do request` → tunnel down. `unknown driver` → Task 1 Step 2 was skipped.
+Expected: `crane` prints `pushed blob` lines and ends with `digest: sha256:...`.
+`connection refused` → tunnel down. `crane: command not found` → install it
+(`brew install crane`).
 
 - [ ] **Step 5 (workstation): confirm the registry holds it**
 
@@ -469,9 +477,12 @@ EOF
 
 ```bash
 sleep 20
-kubectl get pod oomtest -o jsonpath='{.status.containerStatuses[0].lastState.terminated.reason}{"\n"}'
+kubectl get pod oomtest -o jsonpath='{.status.containerStatuses[0].state.terminated.reason}{"\n"}'
 ```
 Expected: `OOMKilled`
+
+`restartPolicy: Never` means the container dies on first run and is never restarted, so
+the reason lives in `.state.terminated`, not `.lastState.terminated`.
 
 Anything else — empty, `Error`, `Completed` — means memory limits are not enforced the
 way later phases assume. **Stop and report.** Do not proceed.
@@ -486,19 +497,58 @@ kubectl delete pod oomtest --ignore-not-found
 
 ## Task 9: Prove the CFS throttling metric exists
 
-The load phase measures CPU throttling directly. Confirm the counter is exposed now,
-while the cluster is idle and the signal is unambiguous.
+The load phase measures CPU throttling directly. Confirm the counter is exposed before
+the load phase depends on it.
 
-- [ ] **Step 1 (workstation)**
+On cgroup v2, cadvisor only emits `container_cpu_cfs_throttled_seconds_total` for a
+cgroup that has a `cpu.max` quota. An idle cluster has no CPU-limited container, so the
+metric is legitimately absent. Check it against a pod that carries a CPU limit instead.
+
+- [ ] **Step 1 (workstation): create a CPU-limited pod**
 
 ```bash
-kubectl get --raw "/api/v1/nodes/lab-worker/proxy/metrics/cadvisor" \
-  | grep -m1 container_cpu_cfs_throttled_seconds_total
+cat <<'EOF' | kubectl apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cputest
+spec:
+  restartPolicy: Never
+  containers:
+    - name: lim
+      image: alpine:3.20
+      command: ["sh", "-c", "sleep 60"]
+      resources:
+        limits:
+          cpu: 200m
+EOF
 ```
-Expected: one line beginning with `container_cpu_cfs_throttled_seconds_total`.
 
-Absent → stop and report. Do not work around it; its absence means the CPU accounting
-the load phase depends on is unavailable.
+- [ ] **Step 2 (workstation): find the node it landed on**
+
+```bash
+kubectl get pod cputest -o jsonpath='{.spec.nodeName}{"\n"}'
+```
+Expected: `lab-worker` or `lab-worker2`.
+
+- [ ] **Step 3 (workstation): read the metric on that node**
+
+```bash
+NODE=$(kubectl get pod cputest -o jsonpath='{.spec.nodeName}')
+kubectl get --raw "/api/v1/nodes/${NODE}/proxy/metrics/cadvisor" \
+  | grep container_cpu_cfs_throttled_seconds_total | grep -v ' 0 '
+```
+Expected: at least one `container_cpu_cfs_throttled_seconds_total{...pod="cputest"}`
+series with a non-zero value.
+
+Absent on the node hosting `cputest` → stop and report. Do not work around it; its
+absence means the CPU accounting the load phase depends on is unavailable.
+
+- [ ] **Step 4 (workstation)**
+
+```bash
+kubectl delete pod cputest --ignore-not-found
+```
 
 ---
 

@@ -25,14 +25,18 @@ Practical consequences:
 | Workstation — macOS, `arm64` | Server `rkperes-linux0` — Ubuntu 26.04, `x86_64` |
 |---|---|
 | repo, editor | container registry, bound to `127.0.0.1:5000` |
-| `docker buildx` → push | kind cluster `lab`: 1 control-plane, 2 workers |
+| `docker buildx` → `crane push` | kind cluster `lab`: 1 control-plane, 2 workers |
 | `kubectl`, `helm` | nothing hand-edited |
 
 - The API server binds the **tailnet** address, so `kubectl` works from anywhere on the
   tailnet without a tunnel.
 - The registry is published on **loopback only**. Images are pushed through an SSH
-  tunnel to `localhost:5000`, which Docker treats as an insecure registry by default —
-  so there is no TLS to manage and no daemon configuration to edit.
+  tunnel to `127.0.0.1:5000`.
+- Docker Desktop runs the daemon inside a Linux VM whose `127.0.0.1` is *not* the Mac's.
+  `docker push localhost:5000` therefore never reaches the tunnel — the VM dials its own
+  empty loopback. Push with `crane` (a host binary that speaks the registry HTTP API,
+  like `curl`), or export with `buildx -o type=docker,dest=...` first. Point `crane` at
+  `127.0.0.1:5000` explicitly; the registry is plain HTTP, no TLS to manage.
 
 ## Cross-compilation is mandatory
 

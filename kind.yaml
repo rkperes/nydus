@@ -1,0 +1,22 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: lab
+
+networking:
+  # Tailnet address of the server. Placed in the API server cert SANs by kind,
+  # so kubectl from any tailnet device validates cleanly.
+  apiServerAddress: "100.120.164.25"
+  apiServerPort: 6443
+
+# Point containerd at a per-registry config directory. The hosts.toml that makes
+# localhost:5000 resolve to the registry container is written by deploy/cluster-up.sh,
+# because it must be created inside each node after the nodes exist.
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      config_path = "/etc/containerd/certs.d"
+
+nodes:
+  - role: control-plane
+  - role: worker
+  - role: worker

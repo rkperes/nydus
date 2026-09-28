@@ -6,7 +6,7 @@ Naming: `YYYY-MM-DD-<slug>.md`. Update the table below when you add or finish a 
 
 | Date | Plan | Status | What it delivers |
 |---|---|---|---|
-| 2026-09-19 | [cluster-foundation](2026-09-19-cluster-foundation.md) | Not started | A remote 3-node kind cluster provisioned from the workstation, a registry round-trip, and cgroup-v2 fidelity proven by test |
+| 2026-09-19 | [cluster-foundation](2026-09-19-cluster-foundation.md) | Done | A remote 3-node kind cluster provisioned from the workstation, a registry round-trip, and cgroup-v2 fidelity proven by test |
 
 Status values: `Not started` · `In progress` · `Done` · `Abandoned`
 
