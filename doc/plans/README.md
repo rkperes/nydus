@@ -7,7 +7,7 @@ Naming: `YYYY-MM-DD-<slug>.md`. Update the table below when you add or finish a 
 | Date | Plan | Status | What it delivers |
 |---|---|---|---|
 | 2026-09-19 | [cluster-foundation](2026-09-19-cluster-foundation.md) | Done | A remote 3-node kind cluster provisioned from the workstation, a registry round-trip, and cgroup-v2 fidelity proven by test |
-| 2026-09-28 | [fakeapi-provider-durable-worker](2026-09-28-fakeapi-provider-durable-worker.md) | Not started | `fakeapi` instrument, one real provider (GitHub), and a Temporal durable worker proven to resume mid-sync with no loss or duplication |
+| 2026-09-28 | [fakeapi-provider-durable-worker](2026-09-28-fakeapi-provider-durable-worker.md) | In progress | `fakeapi` instrument, one real provider (GitHub), and a Temporal durable worker proven to resume mid-sync with no loss or duplication |
 
 Status values: `Not started` · `In progress` · `Done` · `Abandoned`
 

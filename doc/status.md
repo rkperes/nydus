@@ -19,18 +19,19 @@ executed end to end.
 | Docker, kind, kubectl on the server | Done. cgroups v2 and systemd driver verified |
 | Repository, GitLab remote, GitHub mirror | Done |
 | Charter, roadmap, measurement method | Done |
-| ADRs 0001–0008 | All accepted; none open |
+| ADRs 0001–0010 | All accepted; none open |
 | **Phase 0 executed** | **Done** |
 | Phase 1 planned | **Done** — [`2026-09-28-fakeapi-provider-durable-worker.md`](plans/2026-09-28-fakeapi-provider-durable-worker.md) |
+| Phase 1 executed (Tasks 1–6) | **Done** — `fakeapi` deployed; Temporal + own Postgres + UI running; namespace `nydus` registered |
+| Phase 1 remaining (Tasks 7–12) | App Postgres, worker, resumability proof, GitHub sync, Cadence note |
 
 ## Next session starts here
 
-1. **Execute the phase-1 plan** top to bottom. It settles two decisions up front —
-   durable execution is **Temporal** (ADR 0009, self-hosted on kind with its own
-   Postgres) and the first provider is **GitHub** (ADR 0010, overridable) — then builds
-   `fakeapi`, the worker, and proves resumability by killing the worker mid-sync.
-2. Same rule as phase 0: every step states command, expected output, and stop condition.
-   The resumability task (Task 9) is the phase's "done when".
+1. **Continue the phase-1 plan from Task 7** (app Postgres + schema). Tasks 1–6 are done:
+   `fakeapi` runs in the cluster; Temporal (server + its own Postgres + UI) is up with
+   namespace `nydus` registered. Remaining: worker (Task 8), resumability proof (Task 9),
+   GitHub sync (Task 10), Cadence note (Task 11), commit (Task 12).
+2. Resumability (Task 9) is still the phase's "done when".
 
 ## Known-unverified, likely to bite
 
@@ -60,8 +61,8 @@ executed end to end.
 - **MagicDNS does not resolve from the workstation.** Tooling uses the tailnet IP.
 - **`bond0` on the server** — an accidental single-NIC bond from the installer. Cosmetic;
   it holds a valid lease.
-- **Provider selection** for [ADR 0007](decisions/0007-application-scope.md) is a
-  phase-1 design task, deliberately deferred. Criteria are in the ADR.
+- **Second provider** is deferred: GitHub is first (ADR 0010); YouTube is the anticipated
+  contrast provider, recorded as a later ADR when implemented.
 - **Verify `rafaelkperes@gmail.com` on GitHub.** Until then mirrored commits are not
   attributed and do not register on the contribution graph.
 
@@ -80,3 +81,10 @@ executed end to end.
   in `kind.yaml` or the `Makefile`.
 - `git push` goes to GitLab only. A server-side mirror copies to GitHub. Never commit on
   GitHub — the mirror force-pushes over it.
+- Temporal version pinning: the `auto-setup` image tops out at 1.29.x, while
+  `server`/`admin-tools` continue past it. `deploy/temporal/VERSIONS` pins the
+  docker-compose-tested pair (server 1.29.1 / UI 2.34.0).
+- Kubernetes injects `TEMPORAL_UI_PORT=tcp://<clusterip>:8080` from the `temporal-ui`
+  Service; the UI container pins `TEMPORAL_UI_PORT: "8080"` to override it.
+- Temporal's frontend binds the pod IP, not loopback; the in-image `temporal` CLI needs
+  `--address temporal:7233` (see the `ns` target in `deploy/temporal/Makefile`).
