@@ -1,0 +1,188 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: temporal-postgres
+  namespace: nydus
+  labels:
+    app.kubernetes.io/part-of: temporal
+type: Opaque
+stringData:
+  POSTGRES_USER: temporal
+  POSTGRES_PASSWORD: temporal
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-postgres
+  namespace: nydus
+  labels:
+    app.kubernetes.io/part-of: temporal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal-postgres
+  template:
+    metadata:
+      labels:
+        app: temporal-postgres
+        app.kubernetes.io/part-of: temporal
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:__POSTGRES_VERSION__
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: temporal-postgres
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: temporal-postgres
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: temporal
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: temporal-postgres
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: temporal-postgres
+  namespace: nydus
+  labels:
+    app.kubernetes.io/part-of: temporal
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-postgres
+  namespace: nydus
+  labels:
+    app.kubernetes.io/part-of: temporal
+spec:
+  selector:
+    app: temporal-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal
+  namespace: nydus
+  labels:
+    app.kubernetes.io/part-of: temporal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal
+  template:
+    metadata:
+      labels:
+        app: temporal
+        app.kubernetes.io/part-of: temporal
+    spec:
+      containers:
+        - name: temporal
+          image: temporalio/auto-setup:__TEMPORAL_SERVER_VERSION__
+          env:
+            - name: DB
+              value: postgres12
+            - name: DB_PORT
+              value: "5432"
+            - name: POSTGRES_SEEDS
+              value: temporal-postgres
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: temporal-postgres
+                  key: POSTGRES_USER
+            - name: POSTGRES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: temporal-postgres
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: temporal
+          ports:
+            - containerPort: 7233
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal
+  namespace: nydus
+  labels:
+    app.kubernetes.io/part-of: temporal
+spec:
+  selector:
+    app: temporal
+  ports:
+    - name: grpc
+      port: 7233
+      targetPort: 7233
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal-ui
+  namespace: nydus
+  labels:
+    app.kubernetes.io/part-of: temporal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal-ui
+  template:
+    metadata:
+      labels:
+        app: temporal-ui
+        app.kubernetes.io/part-of: temporal
+    spec:
+      containers:
+        - name: temporal-ui
+          image: temporalio/ui:__TEMPORAL_UI_VERSION__
+          env:
+            - name: TEMPORAL_ADDRESS
+              value: temporal:7233
+            - name: TEMPORAL_CORS_ORIGINS
+              value: http://localhost:3000
+            # Kubernetes injects TEMPORAL_UI_PORT=tcp://<clusterip>:8080 from the
+            # `temporal-ui` Service; pin the real listen port so it wins over the injection.
+            - name: TEMPORAL_UI_PORT
+              value: "8080"
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-ui
+  namespace: nydus
+  labels:
+    app.kubernetes.io/part-of: temporal
+spec:
+  selector:
+    app: temporal-ui
+  ports:
+    - port: 8080
+      targetPort: 8080
